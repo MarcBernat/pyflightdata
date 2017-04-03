@@ -237,6 +237,8 @@ def process_raw_airline_flight_data(data):
             record['flight'] = encode_and_get(cells[1].text)
             record['from'] = cells[2]['title']
             record['to'] = cells[3]['title']
+            record['from_iata'] = cells[2].find('a').text
+            record['to_iata'] = cells[3].find('a').text
             record['aircraft-type'] = encode_and_get(cells[4].text)
             link = cells[5].find('a')
             if link:
