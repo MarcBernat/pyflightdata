@@ -4,12 +4,11 @@ from distutils.core import setup
 
 setup(
     name='pyflightdata',
-    version='0.4.2',
+    version='0.4.3',
     description='Get flight data from websites by making HTTP calls',
-    long_description='Please visit https://github.com/supercoderz/pyflightdata for more details',
-    author='Narahari Allamraju',
-    author_email='anarahari@gmail.com',
-    url='https://github.com/supercoderz/pyflightdata',
+    long_description='Please visit https://github.com/supercoderz/pyflightdata && https://github.com/MarcBernat/pyflightdata for more details',
+    author='Narahari Allamraju, Marc Bernat'
+    url='https://github.com/supercoderz/pyflightdata, https://github.com/MarcBernat/pyflightdata', 
     packages=['pyflightdata'],
     install_requires=[
         'lxml',

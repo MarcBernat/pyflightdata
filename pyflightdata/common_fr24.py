@@ -1,4 +1,5 @@
 from .common import *
+import sys
 
 ROOT = 'http://www.flightradar24.com'
 REG_BASE = 'https://api.flightradar24.com/common/v1/flight/list.json?query={0}&fetchBy=reg&page=1&limit=100&token={1}'
@@ -39,12 +40,12 @@ def process_raw_country_data(data):
     for entry in data:
         cells = entry.find_all('td')
         if cells:
+	    record={}
             #this will break one day
             for cell in cells[1:2]:
                 link = cell.find('a')
                 if link:
                     if 'data-country' in link.attrs:
-                        record={}
                         for attr in link.attrs:
                             if attr not in ['href','class','onclick','title']:
                                 attr_new = attr.replace('data-','')
@@ -52,8 +53,18 @@ def process_raw_country_data(data):
                         images = link.find_all('img')
                         if images:
                             for image in images:
-                                record['img'] = image['bn-lazy-src']
-                        result.append(record)
+                                try: 
+                    			record['img'] = image['data-bn-lazy-src']
+				except:
+			    		pass
+	    #also will break one day :D
+	    for cell in cells[3:4]:
+		 count = cell.find('span')
+		 if count:
+		    record['count'] = count.string.strip();
+		 #prevents empty dictionary
+	if record:
+    	    result.append(record)
     return result
 
 
@@ -72,10 +83,17 @@ def process_raw_airport_data(data):
         cells = entry.find_all('td')
         if cells:
             for cell in cells:
+		extra = cell.find('small')
                 link = cell.find('a')
+		record={} 
                 if link:
+		    if extra:
+			#Obtain ICAO from <small> tag
+			for char in '()':
+			    extra.string = extra.string.replace(char,'') 
+			clean = extra.string.split("/")
+			record['icao'] = clean[1]
                     if 'data-iata' in link.attrs:
-                        record={}
                         for attr in link.attrs:
                             if attr not in ['href','class','onclick']:
                                 attr_new = attr.replace('data-','')
@@ -93,10 +111,11 @@ def get_airports_data(url):
 # handle aircraft information
 def get_aircraft_data(url):
     info_data = get_raw_aircraft_info_data(url)
-    return process_raw_aircraft_info_data(info_data)
+    images = get_raw_aircraft_image_data(url)
+    return process_raw_aircraft_info_data(info_data, images)
 
-def get_raw_aircraft_image_data(key):
-    return get_raw_data_json(IMAGE_BASE.format(key), 'thumbnails') or []
+def get_raw_aircraft_image_data(url):
+    return get_raw_data_class_all(url, 'col-xs-6 n-p cnt-picture') or []
 
 
 def get_raw_aircraft_info_data(url):
@@ -112,7 +131,7 @@ def process_raw_aircraft_image_data(data):
     return result
 
 
-def process_raw_aircraft_info_data(data):
+def process_raw_aircraft_info_data(data, images):
     result = []
     record = {}
     for item in data:
@@ -127,10 +146,16 @@ def process_raw_aircraft_info_data(data):
             if span:
                 value = encode_and_get(span.text.strip().lower())
                 record[key] = value
-    if 'mode-s' in record.keys():
-        img_data = get_raw_aircraft_image_data(record['mode-s'])
-        images = process_raw_aircraft_image_data(img_data)
-        record['images'] = images
+    if images:
+	img = []
+	try:
+		for image in images:
+			span = image.find('a')
+			i = span.findAll('img')[0].get('src')
+			img.append(i)
+		record['images'] = img	
+	except:
+		pass
     if len(record)>0:
         result.append(record)
     return result
@@ -165,7 +190,10 @@ def process_raw_airlines_data(data):
                             images = span.find_all('img')
                             if images:
                                 for image in images:
-                                    record['img'] = image['bn-lazy-src']
+					try: 
+                                    		record['img'] = image['data-bn-lazy-src']
+					except:
+				    		pass
                 if 'class' in cell.attrs:
                     if 'text-right' in cell['class']:
                         value = encode_and_get(cell.text.strip())
@@ -198,12 +226,16 @@ def process_raw_airline_fleet_data(data):
             #yeah this sucks
             div = div.find('div')
             if div:
-                atype = encode_and_get(div.text.strip())
-                atype = atype[0:atype.index('\\t')]
-                record['aircraft-type'] = atype
-                span = div.find('span')
-                if span:
-                    record['count']=encode_and_get(span.text.strip())
+		#python split() http://www.pythonforbeginners.com/dictionary/python-split
+		aircraft_type,count = div.text.split()
+		record['aircraft-type'] = aircraft_type
+		record['count'] = count
+	img = parent.find('img')
+	if img:
+		try:
+			record['img'] = img['src']
+		except:
+			pass
         ul = parent.find('ul')
         if ul:
             regs = ul.find_all('li')
